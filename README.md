@@ -1,36 +1,19 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Vanitas Vanitatum, et Omnia Vanitas
 
-## Getting Started
+## 주연
+* **이마시노 미사키**
+* 츠치나가 히요리
+* 하카리 아츠코
 
-First, run the development server:
+## 조연
+* 조마에 사오리
+* 시라스 아즈사
+* 미소노 미카
+* 선생
+* ...
 
-```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
-```
+## 게임 내용
+에덴 조약 사건 이후 아리우스 스쿼드가 길거리를 전전하면서 살아간다는 언급이 인연 스토리 등을 통해서 나오지만 그 세부적인 내용은 나오지 않고 있다. 이 게임에서는 그 부분에 대해서 자세히 다뤄보고자 한다. 
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
-
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
-
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
-
-## Learn More
-
-To learn more about Next.js, take a look at the following resources:
-
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
-
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
-
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+## 게임 스타일
+현 아리우스 스쿼드의 리더 이마시노 미사키의 입장이 되어 스쿼드를 이끌고 다니는 역할을 맡게 된다. 
