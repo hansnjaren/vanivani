@@ -14,6 +14,7 @@ export default function Home(){
         <Event id={2} className="bg-green-200">Event 2</Event>
         <Event id={3} className="bg-cyan-200">Event 3</Event>
         <Event id={4} className="bg-fuchsia-200">Event 4</Event>
+        <Event id={5} className="bg-yellow-200">Event 5</Event>
       </Game>
     </>
   )
