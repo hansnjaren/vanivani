@@ -1,52 +1,21 @@
 'use client'
 
-import { createContext, useCallback, useContext, useEffect, useState } from "react"
+import { createContext, Dispatch, SetStateAction, useCallback, useContext, useEffect, useState } from "react"
+import { blackletter, batang } from "./fonts"
+import type { status, character, time, base } from "@/app/lib/types"
+import { times, eventNum, maxHP, maxCond, maxMental, sleepCondition, mealCondition, maxShopAmmo, maxShopFood, charList, eventList } from "@/app/lib/consts"
 
-type status = {
-    hp: number, 
-    cond: number, 
-    mental: number, 
-}
-
-type character = {
-    name: string,
-    status: status,
-    working: number,  
-}
-
-type time = {
-    day: number,
-    time: number,
-    events: number,
-}
-
-const timeDef: time = {
+export const timeDef: time = {
     day: 0,
     time: 0,
     events: 0,
 }
 
-type base = {
-    food: number, 
-    ammo: number, 
-    cash: number, 
-}
-
-const baseDef: base = {
+export const baseDef: base = {
     food: 0, 
     ammo: 0, 
     cash: 0, 
 }
-
-// 0: breakfast, 2: lunch, 4: dinner, 
-// 1: morning event, 3: afternoon event, 5: night event, 
-const times = ['08:00', '09:00', '13:00', '14:00', '18:00', '19:00', '23:00'];
-const eventNum = 5;
-const maxHP = 100;
-const maxCond = 100;
-const maxMental = 100;
-const sleepCondition = 5;
-const mealCondition = 2;
 
 const GameContext = createContext({
     /**
@@ -99,6 +68,12 @@ const GameContext = createContext({
      */
     updateEvent: ({id}: {id: number}) => {}, 
     avail: new Array<number>(), 
+    shopVisible: false,
+    shopKey : () => {},
+    maxShopFood: maxShopFood,
+    setMaxShopFood: (c: number) => {},
+    maxShopAmmo: maxShopAmmo,
+    setMaxShopAmmo: (c: number) => {},
 })
 
 /**
@@ -113,7 +88,7 @@ export function useGame(){
 }
 
 export default function Game({ children }: { children: React.ReactNode }){
-    const [time, setTime] = useState<time>({ day: 0, time: 0, events: times.length })
+    const [time, setTime] = useState<time>({ day: 1, time: 0, events: times.length })
     const elapse = () => {
         time.time++;
         if(time.time === times.length){
@@ -125,6 +100,11 @@ export default function Game({ children }: { children: React.ReactNode }){
         updateRandom();
     }
     const finishDay = () => {
+        if((time.day % 7) == 0){ // refresh shop
+            setMaxShopFood(maxShopFood);
+            setMaxShopAmmo(maxShopAmmo);
+        }
+
         time.day++;
         time.time = 0;
 
@@ -143,11 +123,7 @@ export default function Game({ children }: { children: React.ReactNode }){
         updateRandom();
     }
 
-    const [chars, setChars] = useState<Array<character>>([
-        { name: 'Imashino Misaki', status: { hp: 100, cond: 100, mental: 100, }, working: 0, }, 
-        { name: 'Tsuchinaga Hiyori', status: { hp: 100, cond: 100, mental: 100, }, working: 0, },
-        { name: 'Hakari Atsuko', status: { hp: 100, cond: 100, mental: 100, }, working: 0, },
-    ])
+    const [chars, setChars] = useState<Array<character>>(charList);
     const updateChars = ({ id, status, rand, length }: { id: number, status: charStatus, rand: charStatus, length: number }) => {
         if(id < 0 || id >= chars.length) throw new Error('character index undefined');
         if(status.hp){
@@ -174,14 +150,7 @@ export default function Game({ children }: { children: React.ReactNode }){
         setBase({...base});
     }
 
-    const [events, setEvents] = useState<Array<event>>([
-        { charEvent: { people: 0, status: { cond: mealCondition, }, length: 0, charList: [], rand: {}, }, baseEvent: { status: { food: -5 }, rand: {}, }, event: false, },
-        { event: true, }, 
-        { charEvent: { people: 3, status: { hp: 5 }, length: 1, charList: [], rand: {}, }, event: true, },
-        { charEvent: { people: 2, status: { cond: -5 }, length: 2, charList: [], rand: {}, }, event: true, },
-        { baseEvent: { status: { food: 10, ammo: 100, cash: 10000, }, rand: {}, }, event: true, },
-        { charEvent: { people: 1, status: { mental: 10 }, length: 3, charList: [], rand: {} }, baseEvent: { status: { food: -2, }, rand: {}, }, event: true, },
-    ]);
+    const [events, setEvents] = useState<Array<event>>(eventList);
 
     const updateEvent = ({id}: {id: number}) => {
         const { charEvent, baseEvent, event } = events[id];
@@ -242,6 +211,23 @@ export default function Game({ children }: { children: React.ReactNode }){
         updateRandom();
     }, [])
 
+    const [shopVisible, setShopVisible] = useState(false); // false for default
+    const shopKey = () => {
+        setShopVisible(!shopVisible);
+    }
+
+    
+    const [ maxFood, setMaxFood ] = useState(maxShopFood);
+    const [ maxAmmo, setMaxAmmo ] = useState(maxShopAmmo);
+    
+    const setMaxShopFood = (c: number) => {
+        setMaxFood(c);
+    }
+
+    const setMaxShopAmmo = (c: number) => {
+        setMaxAmmo(c);
+    }
+
     return(
         <GameContext.Provider value={{
             time: time,
@@ -254,6 +240,12 @@ export default function Game({ children }: { children: React.ReactNode }){
             events: events, 
             updateEvent: updateEvent, 
             avail: avail, 
+            shopVisible: shopVisible,
+            shopKey: shopKey,
+            maxShopFood: maxFood,
+            setMaxShopFood: setMaxShopFood,
+            maxShopAmmo: maxAmmo,
+            setMaxShopAmmo: setMaxShopAmmo,
         }}>
             {children}
         </GameContext.Provider>
@@ -264,9 +256,10 @@ export function Time(){
     const { time, elapse, finishDay } = useGame();
     return(
         <div style={{userSelect: 'none'}}>
+            <span>Buttons For Debug</span>
             <div onClick={elapse} className="border-black border-solid border-2 inline-block">Time elapse</div>
             <div onClick={finishDay} className="border-black border-solid border-2 inline-block">Finish this day</div>
-            <div>{ [ time.day, times[time.time], time.events ].toString() }</div>
+            <div>Day { time.day }, { times[time.time] }</div>
         </div>
     )
 }
@@ -278,15 +271,17 @@ export function Chars(){
         <div>
             {
                 chars.map(function(char: character){
-                    return <div key={char.name}>{charToString(char)}</div>;
+                    // return <div key={char.name}>{charToString(char)}</div>;
+                    return charToUI(char);
                 })
             }
-            Available characters:&nbsp;
+            <br></br>
+            {/* Available characters:&nbsp;
             {   avail.length > 0 ? 
                 avail.map(function(id, i){
                     return <div className="inline-block" key={i}>{i == 0 ? '' : ', '}{chars[id].name}</div>
                 }) : <div className="inline-block">None</div>
-            }
+            } */}
         </div>
     )
 }
@@ -300,11 +295,47 @@ export function Base(){
     )
 }
 
-export function charToString(char: character){
+function charToString(char: character){
     const { name, status, working } = char
     const { hp, cond, mental } = status
     const retVal = 'Name: ' + name + ', HP: ' + hp + ', Condition: ' + cond + ', Mental Health: ' + mental + ', Working: ' + working;
     return retVal;
+}
+
+function charToUI(char: character){
+    const { name, status, working, img } = char
+    const { hp, cond, mental } = status
+    const gaugeWidth = 200;
+    return(
+        <div key={name} className="my-1 mr-1 inline-block border-black border-2 border-solid" style={{userSelect: "none"}}>
+            <div className="align-middle w-32 inline-block m-2 top-0">
+                <img src={img} alt="No Image"></img>
+            </div>
+            <div className="align-middle relative inline-block m-2">
+                <div className="m-1 inline-block">{name}</div>
+                <div className="m-1 absolute top-0 right-0">Working: {working}</div>
+                <div className="m-1">
+                    <div className="inline-block w-6">HP</div>
+                    <div className="gauge bg-red-200" style={{width: gaugeWidth}}>
+                        <div className="h-full bg-red-600" style={{width: (hp * gaugeWidth / 100)}}></div>
+                    </div>
+                    {hp}
+                </div>
+                <div className="m-1">
+                    <div className="inline-block w-6">Co</div>
+                    <div className="gauge bg-green-200" style={{width: gaugeWidth}}>
+                        <div className="h-full bg-green-600" style={{width: (cond * gaugeWidth / 100)}}></div>
+                    </div>
+                    {cond}</div>
+                <div className="m-1">
+                    <div className="inline-block w-6">Me</div>
+                    <div className="gauge bg-blue-200" style={{width: gaugeWidth}}>
+                        <div className="h-full bg-blue-600" style={{width: (mental * gaugeWidth / 100)}}></div>
+                    </div>
+                    {mental}</div>
+            </div>
+        </div>
+    )
 }
 
 type charStatus = {
@@ -340,6 +371,7 @@ type event = {
 
 export function Event({ children, className, id }: { children: React.ReactNode, className?: string, id: number }){
     if(!className) className=""
+    className = "event " + className;
     const { time, avail, events, chars, base, updateEvent } = useGame();
     if(id >= events.length) throw new Error('event index undefined');
     const { charEvent, baseEvent, event } = events[id];
@@ -367,45 +399,67 @@ export function Event({ children, className, id }: { children: React.ReactNode, 
 
     return(
         <div className={className} onClick={available()?() => updateEvent({id}):()=>{}} 
-            style={{userSelect: 'none', backgroundColor: available() ? '' : 'rgb(229 231 235)'}}>
+            style={{userSelect: 'none', backgroundColor: available() ? '' : 'rgb(229 231 235)', display: available() ? '' : 'none'}}>
             <div>{ children }</div>
+            <div className="flex">
+                <div className="mx-auto">
+                    {/* <div className="inline-block">Characters affected:&nbsp;</div> */}
+                    { charEvent?.charList && charEvent.charList.length > 0 ? charEvent.charList.map((id, i) => {
+                        return <img key={chars[id].name} className="w-12 inline-block" src={chars[id].img}></img>
+                    }) : <div className="inline-block">{ event ? '' : chars.map((char, i) => {
+                        return char.working > 0 ? <span key={`span-${char.name}-${i}`}></span>: <img key={`img-${char.name}-${i}`} className="w-12 inline-block" src={char.img}></img>
+                    }) }</div> }
+                </div>
+            </div>
+            { charEvent ? <div className="status left-0 bottom-0">
+                <div>
+                    HP:&nbsp;{charEvent.status.hp ? // is HP affected?
+                                (charEvent.status.hp + (charEvent.rand.hp ? charEvent.rand.hp : 0) > 0 ? '+' : '') // sign of value
+                                + (charEvent.status.hp + (charEvent.rand.hp ? charEvent.rand.hp : 0)) // value
+                                : 0}
+                </div>
+                <div>
+                    Co:&nbsp;{charEvent.status.cond ? 
+                                    (charEvent.status.cond + (charEvent.rand.cond ? charEvent.rand.cond : 0) > 0 ? '+' : '')
+                                    + (charEvent.status.cond + (charEvent.rand.cond ? charEvent.rand.cond : 0))
+                                    : 0}
+                </div>
+                <div>
+                    Me:&nbsp;{charEvent.status.mental ? 
+                                (charEvent.status.mental + (charEvent.rand.mental ? charEvent.rand.mental : 0) > 0 ? '+' : '') 
+                                + (charEvent.status.mental + (charEvent.rand.mental ? charEvent.rand.mental : 0))
+                                : 0}
+                </div>
+                </div> : <div className="status left-0 bottom-0">
+                <div>HP: 0</div>
+                <div>Co: 0</div>
+                <div>Me: 0</div>
+                </div> }
 
-            <div className="inline-block">Characters affected:&nbsp;</div>
-            { charEvent?.charList && charEvent.charList.length > 0 ? charEvent.charList.map((id, i) => {
-                return <div className="inline-block" key={ chars[id].name }>{ i > 0 ? ', ' : '' }{ chars[id].name }</div>
-            }) : <div className="inline-block">{ event ? 'None' : 'Everyone available' }</div> }
-
-            { charEvent ? <div>
-                Effect to chosen characters:
-                HP:&nbsp;{charEvent.status.hp ? // is HP affected?
-                          (charEvent.status.hp + (charEvent.rand.hp ? charEvent.rand.hp : 0) > 0 ? '+' : '') // sign of value
-                           + (charEvent.status.hp + (charEvent.rand.hp ? charEvent.rand.hp : 0)) // value
-                           : 'Not affected'},
-                Condition:&nbsp;{charEvent.status.cond ? 
-                                 (charEvent.status.cond + (charEvent.rand.cond ? charEvent.rand.cond : 0) > 0 ? '+' : '')
-                                 + (charEvent.status.cond + (charEvent.rand.cond ? charEvent.rand.cond : 0))
-                                 : 'Not affected'},
-                Mental:&nbsp;{charEvent.status.mental ? 
-                              (charEvent.status.mental + (charEvent.rand.mental ? charEvent.rand.mental : 0) > 0 ? '+' : '') 
-                              + (charEvent.status.mental + (charEvent.rand.mental ? charEvent.rand.mental : 0))
-                              : 'Not affected'}
-                </div> : <div></div> }
-
-            { baseEvent ? <div>
-                Effect to base: 
-                Food:&nbsp;{baseEvent.status.food ?
-                            ((baseEvent.status.food + (baseEvent.rand.food ? baseEvent.rand.food : 0)) * (event ? 1 : avail.length) > 0 ? '+' : '')
-                            + (baseEvent.status.food + (baseEvent.rand.food ? baseEvent.rand.food : 0)) * (event ? 1 : avail.length)
-                            : 'Not affected'},
-                Ammo:&nbsp;{baseEvent.status.ammo ?
-                            ((baseEvent.status.ammo + (baseEvent.rand.ammo ? baseEvent.rand.ammo : 0)) * (event ? 1 : avail.length) > 0 ? '+' : '')
-                            + (baseEvent.status.ammo + (baseEvent.rand.ammo ? baseEvent.rand.ammo : 0)) * (event ? 1 : avail.length)
-                            : 'Not affected'},
-                Cash:&nbsp;{baseEvent.status.cash ?
-                            ((baseEvent.status.cash + (baseEvent.rand.cash ? baseEvent.rand.cash : 0)) * (event ? 1 : avail.length) > 0 ? '+' : '')
-                            + (baseEvent.status.cash + (baseEvent.rand.cash ? baseEvent.rand.cash : 0)) * (event ? 1 : avail.length)
-                            : 'Not affected'}
-            </div> : <div></div> }
+            { baseEvent ? <div className="status right-0 bottom-0">
+                <div>
+                    Fo:&nbsp;{baseEvent.status.food ?
+                                ((baseEvent.status.food + (baseEvent.rand.food ? baseEvent.rand.food : 0)) * (event ? 1 : avail.length) > 0 ? '+' : '')
+                                + (baseEvent.status.food + (baseEvent.rand.food ? baseEvent.rand.food : 0)) * (event ? 1 : avail.length)
+                                : 0}
+                </div>
+                <div>
+                    Am:&nbsp;{baseEvent.status.ammo ?
+                                ((baseEvent.status.ammo + (baseEvent.rand.ammo ? baseEvent.rand.ammo : 0)) * (event ? 1 : avail.length) > 0 ? '+' : '')
+                                + (baseEvent.status.ammo + (baseEvent.rand.ammo ? baseEvent.rand.ammo : 0)) * (event ? 1 : avail.length)
+                                : 0}
+                </div>
+                <div>
+                    Ca:&nbsp;{baseEvent.status.cash ?
+                                ((baseEvent.status.cash + (baseEvent.rand.cash ? baseEvent.rand.cash : 0)) * (event ? 1 : avail.length) > 0 ? '+' : '')
+                                + (baseEvent.status.cash + (baseEvent.rand.cash ? baseEvent.rand.cash : 0)) * (event ? 1 : avail.length)
+                                : 0}
+                </div>
+            </div> : <div className="status right-0 bottom-0">
+                <div>Fo: 0</div>
+                <div>Am: 0</div>
+                <div>Ca: 0</div>
+            </div> }
             {/* <div>Base affected: { baseEvent ? 'Yes' : 'No' }</div> */}
         </div>
     )
@@ -429,4 +483,122 @@ function dist(){ // based on Box-Muller transform; https://stackoverflow.com/que
     num = num / 10.0;
     if (num > 0.5 || num < -0.5) return dist()// resample between -0.5 and 0.5
     return num
+}
+
+export function Counter({children, value, modifier, maxVal, className}: {children?: string, value: number, modifier: Dispatch<SetStateAction<number>>, maxVal?: number, className?: string}){
+    // const [count, setCount] = useState(0);
+    const decrease = () => modifier((c) => c > 0 ? c - 1 : c)
+    const increase = () => modifier((c) => typeof(maxVal) == "number" && c >= maxVal ? c : c + 1)
+
+    if(!className) className = "";
+    const leftButton = "inline-block size-8 border-solid border-black border-y-2 border-l-2 align-center text-center" + className;
+    const contentHolder = "inline-block size-8 border-solid border-black border-2 align-center text-center" + className
+    const rightButton = "inline-block size-8 border-solid border-black border-y-2 border-r-2 align-center text-center" + className;
+
+    return(
+        <div style={{userSelect: 'none'}} className="m-3">
+            <div className={className}>{children}</div>
+            <div onClick={decrease} className={leftButton} 
+            style={{
+                backgroundColor: value > 0 ? 'transparent' : '#ccc',
+                color: value > 0 ? 'black' : '#888',
+                borderColor: value > 0 ? 'black' : '#888',
+            }}>-</div>
+            <div className={contentHolder}>{value}</div>
+            <div onClick={increase} className={rightButton}
+            style={{
+                backgroundColor: typeof(maxVal) == "number" && value >= maxVal ? '#ccc' : 'transparent',
+                color: typeof(maxVal) == "number" && value >= maxVal ? '#888' : 'black',
+                borderColor: typeof(maxVal) == "number" && value >= maxVal ? '#888' : 'black',
+            }}>+</div>
+        </div>
+    )
+}
+
+
+export function Shop(){
+    const { base, maxShopFood, setMaxShopFood, maxShopAmmo, setMaxShopAmmo, shopVisible, shopKey } = useGame(); // consider moving it here
+    const [ foodBuy, setFoodBuy ] = useState(0);
+    const [ ammoBuy, setAmmoBuy ] = useState(0);
+
+    const buyFood = () => {
+        base.food += foodBuy * 10;
+        setMaxShopFood(maxShopFood - foodBuy)
+        setFoodBuy(0);
+    }
+
+    const buyAmmo = () => {
+        base.ammo += ammoBuy * 100;
+        setMaxShopAmmo(maxShopAmmo - ammoBuy)
+        setAmmoBuy(0);
+    }
+
+    return(
+        <>
+            <div onClick={shopKey} className="border-black border-solid border-2 inline-block">Open Shop</div>
+            { shopVisible ? <>
+                                {/* <div className="fixed top-0 left-0 w-full h-full bg-gray-300 opacity-90 z-10"></div> */}
+                                <div className="shop-background" style={{display: (shopVisible ? "" : "none")}}>
+                                    <div className="fixed top-0 left-0 w-full h-full bg-gray-300 opacity-90 z-10" onClick={shopKey}></div>
+                                    {/* Shop Header */}
+                                    <div className="w-full h-1/6 items-center text-center flex" onClick={shopKey}>
+                                        <div className="w-full text-center z-20" style={{userSelect: 'none'}}>
+                                            <div className="text-2xl md:text-5xl m-3">Shop</div>
+                                            <div>Cash: {base.cash}</div>
+                                        </div>
+                                    </div>
+                                    {/* Food */}
+                                    <div className="absolute top-1/4 w-4/12 inline-block bg-gray-500 z-20" style={{left: '8.3%', userSelect: 'none'}}>
+                                        <div className="relative w-full text-center bg-white text-2xl">Food</div>
+                                        <div className="m-3">Current food: {base.food}</div>
+                                        <div className="m-3">Chosen: {foodBuy}</div>
+                                        <div className="m-3">Max: {maxShopFood}</div>
+                                        <Counter maxVal={maxShopFood} value={foodBuy} modifier={setFoodBuy}>Food * 10</Counter>
+                                        <div className="bg-blue-500 text-center" onClick={buyFood}>Buy</div>
+                                    </div>
+                                    {/* Ammo */}
+                                    <div className="absolute top-1/4 w-4/12 inline-block bg-gray-500 z-20" style={{right: '8.3%', userSelect: 'none'}}>
+                                        <div className="relative w-full text-center bg-white text-2xl">Ammo</div>
+                                        <div className="m-3">Current ammo: {base.ammo}</div>
+                                        <div className="m-3">Chosen: {ammoBuy}</div>
+                                        <div className="m-3">Max: {maxShopAmmo}</div>
+                                        <Counter maxVal={maxShopAmmo} value={ammoBuy} modifier={setAmmoBuy}>Ammo * 100</Counter>
+                                        <div className="bg-blue-500 text-center" onClick={buyAmmo}>Buy</div>
+                                    </div>
+                                    {/* <div className="w-1/12 inline-block"></div> */}
+                                </div>
+                            </>
+                          : <></>}
+        </>
+    )
+}
+
+export function Opening(){
+    const [openingVisible, setOpeningVisible] = useState(true); // true for default
+    return(
+        <div className="fixed top-0 right-0 size-full bg-white z-10" style={{display: (openingVisible ? "" : "none")}}>
+            <div className={`${blackletter.className} title text-5xl w-full text-center`}>earum vana vita</div>
+            <div className={`${batang.className} subtitle text-2xl text-gray-500 w-full text-center`}>그녀들의 헛된 생존기</div>
+            <div className="w-1/2 h-3/4 absolute left-1/2 -translate-x-1/2">
+                <div className="Misaki border-black border-solid border-2 w-full h-1/3 overflow-hidden m-3 flex items-center">{/* absolute left-1/4 */}
+                    <div className="w-1/4 m-3 inline-block">
+                        <img className="rotate-[-15deg]" src="Imashino_Misaki.jpg"></img>
+                    </div>
+                    <div className={`${batang.className} inline-block`}>모든 것은 헛되고 헛될텐데 이 모든 것에 무슨 의미가 있지...</div>
+                </div>
+                <div className="Hiyori border-black border-solid border-2 w-full h-1/3 overflow-hidden m-3 flex items-center">
+                    <div className={`${batang.className} inline-block ml-auto`}>으아아앙- 오늘도 허탕이에요...</div>
+                    <div className="w-1/4 m-3 inline-block">
+                        <img className="rotate-[15deg]" src="Tsuchinaga_Hiyori.jpg"></img>
+                    </div>
+                </div>
+                <div className="Atsuko border-black border-solid border-2 w-full h-1/3 overflow-hidden m-3 flex items-center">
+                    <div className="w-1/4 m-3 inline-block">
+                        <img className="rotate-[-15deg]" src="Hakari_Atsuko.jpg"></img>
+                    </div>
+                    <div className={`${batang.className} p-3 inline-block text-3xl border-black border-solid border-2 absolute left-1/2 -translate-x-1/2`} onClick={() => setOpeningVisible(false)} style={{userSelect: 'none'}}>START</div>
+                </div>
+            </div>
+        </div>
+    )
 }

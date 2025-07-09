@@ -15,7 +15,7 @@ import "./globals.css";
 // });
 
 export const metadata: Metadata = {
-  title: "VaniVani",
+  title: "Earum Vana Vita",
   description: "Game on development",
 };
 
